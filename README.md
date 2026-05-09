@@ -6,6 +6,9 @@ A fully Dockerized, production-ready Proof of Concept (POC) for scheduling dynam
 
 ![alt text](image-1.png)
 
+> [!WARNING]
+> **Disclaimer**: This project is a **Proof of Concept (POC)** and "vibe coded." It is **not production-ready** as-is. While it demonstrates a scalable architecture, it requires further refinement, proper error handling, security hardening, and production-grade monitoring before being deployed to a live environment.
+
 ## ✨ Features
 
 - **Four Scheduling Modes**: Immediate, Delayed (one-time), Interval (repeating), and Cron (repeating).
