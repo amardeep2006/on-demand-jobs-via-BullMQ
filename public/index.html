@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BullMQ Job Scheduler</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#08080f;--surface:rgba(255,255,255,.05);--surface2:rgba(255,255,255,.08);
+    --border:rgba(255,255,255,.1);--primary:#7c3aed;--primary-glow:rgba(124,58,237,.35);
+    --cyan:#06b6d4;--green:#10b981;--red:#ef4444;--amber:#f59e0b;
+    --text:#e2e8f0;--muted:#94a3b8;--radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;
+    background-image:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(124,58,237,.15),transparent)}
+  /* Layout */
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  /* Sidebar */
+  aside{background:rgba(0,0,0,.4);border-right:1px solid var(--border);padding:24px 0;
+    position:sticky;top:0;height:100vh;display:flex;flex-direction:column;backdrop-filter:blur(12px)}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+  .logo h1{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,#a78bfa,#38bdf8);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .logo p{font-size:.72rem;color:var(--muted);margin-top:4px}
+  nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:var(--muted);
+    text-decoration:none;font-size:.875rem;font-weight:500;transition:.2s;cursor:pointer;border:none;
+    background:none;width:100%;text-align:left}
+  nav a:hover{color:var(--text);background:var(--surface)}
+  nav a.active{color:#a78bfa;background:rgba(124,58,237,.15);border-right:2px solid var(--primary)}
+  nav a .icon{width:18px;text-align:center}
+  .health-badge{margin:auto 20px 0;padding:10px 14px;border-radius:8px;
+    border:1px solid var(--border);font-size:.78rem;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:.3s}
+  .dot.online{background:var(--green);box-shadow:0 0 6px var(--green)}
+  /* Main */
+  main{padding:32px;max-width:860px}
+  .section{display:none}
+  .section.active{display:block}
+  h2{font-size:1.4rem;font-weight:700;margin-bottom:4px}
+  .subtitle{color:var(--muted);font-size:.875rem;margin-bottom:28px}
+  /* Card */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;backdrop-filter:blur(8px)}
+  /* Form */
+  label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+  input,textarea,select{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-family:inherit;font-size:.875rem;padding:10px 14px;
+    transition:.2s;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+  textarea{resize:vertical;min-height:90px;font-family:'JetBrains Mono',monospace;font-size:.8rem}
+  .form-row{margin-bottom:18px}
+  /* Schedule type cards */
+  .sched-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+  .sched-card{border:1px solid var(--border);border-radius:10px;padding:14px 10px;cursor:pointer;
+    text-align:center;transition:.2s;background:rgba(0,0,0,.2)}
+  .sched-card:hover{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.08)}
+  .sched-card.selected{border-color:var(--primary);background:rgba(124,58,237,.15);
+    box-shadow:0 0 0 1px var(--primary)}
+  .sched-card .emoji{font-size:1.5rem;display:block;margin-bottom:6px}
+  .sched-card .label{font-size:.75rem;font-weight:600;color:var(--muted)}
+  .sched-card.selected .label{color:#a78bfa}
+  .sched-extra{display:none;margin-bottom:18px;animation:fadeIn .2s}
+  .sched-extra.show{display:block}
+  /* Button */
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:8px;
+    font-family:inherit;font-size:.875rem;font-weight:600;cursor:pointer;border:none;transition:.2s}
+  .btn-primary{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff}
+  .btn-primary:hover{opacity:.85;transform:translateY(-1px)}
+  .btn-primary:active{transform:translateY(0)}
+  .btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:var(--red);padding:6px 14px;font-size:.8rem}
+  .btn-danger:hover{background:rgba(239,68,68,.25)}
+  .btn-sm{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 14px;font-size:.8rem}
+  .btn-sm:hover{border-color:rgba(124,58,237,.5)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  /* Response */
+  .response-box{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:8px;
+    padding:16px;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;
+    line-height:1.6;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;display:none}
+  .response-box.show{display:block}
+  .response-box.ok{border-color:rgba(16,185,129,.4)}
+  .response-box.err{border-color:rgba(239,68,68,.4)}
+  /* State tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:20px;background:rgba(0,0,0,.3);
+    border-radius:10px;padding:4px}
+  .tab{flex:1;padding:8px;border:none;background:none;color:var(--muted);font-size:.8rem;
+    font-weight:600;border-radius:7px;cursor:pointer;transition:.2s;font-family:inherit}
+  .tab:hover{color:var(--text)}
+  .tab.active{background:var(--surface2);color:var(--text)}
+  /* Job cards */
+  .job-card{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px}
+  .job-card:hover{border-color:rgba(124,58,237,.4)}
+  .job-meta{flex:1;min-width:0}
+  .job-meta .name{font-weight:600;font-size:.9rem;margin-bottom:3px}
+  .job-meta .id{font-size:.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .job-meta .data{font-size:.75rem;color:var(--muted);margin-top:4px}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:600;flex-shrink:0}
+  .badge-waiting{background:rgba(245,158,11,.15);color:var(--amber)}
+  .badge-active{background:rgba(6,182,212,.15);color:var(--cyan)}
+  .badge-completed{background:rgba(16,185,129,.15);color:var(--green)}
+  .badge-failed{background:rgba(239,68,68,.15);color:var(--red)}
+  .badge-delayed{background:rgba(124,58,237,.15);color:#a78bfa}
+  .empty{text-align:center;color:var(--muted);padding:40px;font-size:.875rem}
+  /* Inspector */
+  .lookup-row{display:flex;gap:10px;margin-bottom:20px}
+  .lookup-row input{flex:1}
+  /* Repeatable */
+  .rep-card{background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:10px;
+    padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+  .rep-info{flex:1;min-width:0}
+  .rep-info .name{font-weight:600;font-size:.875rem}
+  .rep-info .key{font-size:.7rem;color:var(--muted);font-family:'JetBrains Mono',monospace;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rep-info .next{font-size:.75rem;color:var(--cyan);margin-top:3px}
+  /* Loader */
+  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);
+    border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  /* Toast */
+  #toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;
+    font-size:.875rem;font-weight:500;opacity:0;transform:translateY(8px);transition:.3s;z-index:999;
+    pointer-events:none}
+  #toast.show{opacity:1;transform:none}
+  #toast.ok{background:#10b981;color:#fff}
+  #toast.err{background:#ef4444;color:#fff}
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside>
+    <div class="logo">
+      <h1>⚡ BullMQ Scheduler</h1>
+      <p>On-demand job management</p>
+    </div>
+    <nav>
+      <a class="active" onclick="show('schedule',this)"><span class="icon">🚀</span>Schedule Job</a>
+      <a onclick="show('browse',this)"><span class="icon">📋</span>Browse Jobs</a>
+      <a onclick="show('repeatable',this)"><span class="icon">🔄</span>Repeatable Jobs</a>
+      <a onclick="show('inspector',this)"><span class="icon">🔍</span>Job Inspector</a>
+      <a href="/api-docs" target="_blank"><span class="icon">📖</span>Swagger Docs</a>
+    </nav>
+    <div class="health-badge">
+      <div class="dot" id="healthDot"></div>
+      <span id="healthText" style="color:var(--muted);font-size:.78rem">Checking…</span>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <!-- SCHEDULE -->
+    <div id="sec-schedule" class="section active">
+      <h2>Schedule a Job</h2>
+      <p class="subtitle">Choose a schedule type and submit a job to the queue</p>
+      <div class="card">
+        <div class="form-row">
+          <label>Job Name</label>
+          <input id="jobName" type="text" placeholder="e.g. send-email" value="send-email"/>
+        </div>
+        <div class="form-row">
+          <label>Schedule Type</label>
+          <div class="sched-grid">
+            <div class="sched-card selected" onclick="selectSched('immediate',this)">
+              <span class="emoji">⚡</span><span class="label">Immediate</span>
+            </div>
+            <div class="sched-card" onclick="selectSched('delayed',this)">
+              <span class="emoji">⏰</span><span class="label">Delayed</span>
+            </div>
+            <div class="sched-card" onclick="selectSched('interval',this)">
+              <span class="emoji">🔁</span><span class="label">Interval</span>
+            </div>
+            <div class="sched-card" onclick="selectSched('cron',this)">
+              <span class="emoji">📅</span><span class="label">Cron</span>
+            </div>
+          </div>
+          <div id="extra-delayed" class="sched-extra">
+            <label>When to run</label>
+            <input id="whenInput" type="text" value="in 30 minutes" placeholder="e.g. 2h · 30m · in 2 hours · tomorrow at 9am · next Monday"/>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:5px">
+              Accepts <code style="color:#a78bfa">2h</code>, <code style="color:#a78bfa">30m</code>, <code style="color:#a78bfa">1d</code>
+              &nbsp;or natural language:&nbsp;
+              <code style="color:#a78bfa">in 2 hours</code>,
+              <code style="color:#a78bfa">tomorrow at 9am</code>,
+              <code style="color:#a78bfa">next Monday at 09:00</code>
+            </p>
+          </div>
+          <div id="extra-interval" class="sched-extra">
+            <label>Repeat Every</label>
+            <input id="everyInput" type="text" value="30m" placeholder="e.g. 30m · 2h · 1 day · 2 hours"/>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:5px">
+              Accepts <code style="color:#a78bfa">30m</code>, <code style="color:#a78bfa">2h</code>,
+              <code style="color:#a78bfa">1d</code>, <code style="color:#a78bfa">2 hours</code>,
+              <code style="color:#a78bfa">30 minutes</code>
+            </p>
+          </div>
+          <div id="extra-cron" class="sched-extra">
+            <label>Cron Pattern</label>
+            <input id="cronPattern" type="text" value="* * * * *" placeholder="* * * * *"/>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:5px">
+              Format: minute hour day month weekday &nbsp;|&nbsp;
+              <code style="color:#a78bfa">0 9 * * 1</code> = Mon 9 AM &nbsp;
+              <code style="color:#a78bfa">*/5 * * * *</code> = every 5 min
+            </p>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Job Data (JSON)</label>
+          <textarea id="jobData">{"to": "alice@example.com", "subject": "Hello!"}</textarea>
+        </div>
+        <button class="btn btn-primary" id="scheduleBtn" onclick="scheduleJob()">
+          <span>Schedule Job</span>
+        </button>
+        <div class="response-box" id="scheduleRes"></div>
+      </div>
+    </div>
+
+    <!-- BROWSE -->
+    <div id="sec-browse" class="section">
+      <h2>Browse Jobs</h2>
+      <p class="subtitle">Inspect jobs by their current state</p>
+      <div class="tabs">
+        <button class="tab active" onclick="loadJobs('waiting',this)">Waiting</button>
+        <button class="tab" onclick="loadJobs('active',this)">Active</button>
+        <button class="tab" onclick="loadJobs('delayed',this)">Delayed</button>
+        <button class="tab" onclick="loadJobs('completed',this)">Completed</button>
+        <button class="tab" onclick="loadJobs('failed',this)">Failed</button>
+      </div>
+      <div id="jobsList"><div class="empty">Select a state tab to load jobs</div></div>
+    </div>
+
+    <!-- REPEATABLE -->
+    <div id="sec-repeatable" class="section">
+      <h2>Repeatable Jobs</h2>
+      <p class="subtitle">Manage interval and cron-based repeating jobs</p>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+        <button class="btn btn-sm" onclick="loadRepeatable()">↻ Refresh</button>
+      </div>
+      <div id="repList"><div class="empty">Loading…</div></div>
+    </div>
+
+    <!-- INSPECTOR -->
+    <div id="sec-inspector" class="section">
+      <h2>Job Inspector</h2>
+      <p class="subtitle">Look up a job by its ID</p>
+      <div class="lookup-row">
+        <input id="inspectId" type="text" placeholder="Paste job ID here…"/>
+        <button class="btn btn-primary" onclick="inspectJob()">Look Up</button>
+      </div>
+      <div class="response-box" id="inspectRes"></div>
+      <div id="inspectActions" style="margin-top:12px;display:none">
+        <button class="btn btn-danger" onclick="deleteJob()">🗑 Delete This Job</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let schedType = 'immediate';
+
+  // ── Nav ───────────────────────────────────────────────────────────────────
+  function show(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('sec-' + id).classList.add('active');
+    if (el) el.classList.add('active');
+    if (id === 'repeatable') loadRepeatable();
+    if (id === 'browse') loadJobs('waiting', document.querySelector('.tab'));
+  }
+
+  // ── Health ────────────────────────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const ok = r.ok;
+      document.getElementById('healthDot').className = 'dot ' + (ok ? 'online' : '');
+      document.getElementById('healthText').textContent = ok ? 'Server online' : 'Server error';
+    } catch { document.getElementById('healthText').textContent = 'Unreachable'; }
+  }
+  checkHealth();
+  setInterval(checkHealth, 10000);
+
+  // ── Schedule type ─────────────────────────────────────────────────────────
+  function selectSched(type, card) {
+    schedType = type;
+    document.querySelectorAll('.sched-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    ['delayed','interval','cron'].forEach(t => {
+      document.getElementById('extra-' + t).classList.toggle('show', t === type);
+    });
+  }
+
+  // ── Schedule job ──────────────────────────────────────────────────────────
+  async function scheduleJob() {
+    const btn = document.getElementById('scheduleBtn');
+    const res = document.getElementById('scheduleRes');
+    const jobName = document.getElementById('jobName').value.trim();
+    if (!jobName) { toast('Job name is required', 'err'); return; }
+
+    let data = {};
+    try { data = JSON.parse(document.getElementById('jobData').value || '{}'); }
+    catch { toast('Invalid JSON in job data', 'err'); return; }
+
+    const schedule = buildSchedule();
+    if (!schedule) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div><span>Scheduling…</span>';
+
+    try {
+      const r = await fetch('/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobName, data, schedule }),
+      });
+      const json = await r.json();
+      showRes(res, json, r.ok);
+      if (r.ok) toast('✅ ' + (json.description || 'Job scheduled') + ' · ID: ' + json.jobId, 'ok');
+      else toast('Error: ' + (json.error || (json.issues && json.issues[0]?.message) || 'Unknown error'), 'err');
+    } catch (e) { toast('Network error', 'err'); }
+    finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Schedule Job</span>';
+    }
+  }
+
+  function buildSchedule() {
+    switch (schedType) {
+      case 'immediate': return { type: 'immediate' };
+      case 'delayed': {
+        const when = document.getElementById('whenInput').value.trim();
+        if (!when) { toast('Enter a delay — e.g. "2h" or "tomorrow at 9am"', 'err'); return null; }
+        return { type: 'delayed', when };
+      }
+      case 'interval': {
+        const every = document.getElementById('everyInput').value.trim();
+        if (!every) { toast('Enter an interval — e.g. "30m" or "2 hours"', 'err'); return null; }
+        return { type: 'interval', every };
+      }
+      case 'cron': {
+        const pattern = document.getElementById('cronPattern').value.trim();
+        if (!pattern) { toast('Enter a cron pattern', 'err'); return null; }
+        return { type: 'cron', pattern };
+      }
+    }
+  }
+
+  // ── Browse ────────────────────────────────────────────────────────────────
+  async function loadJobs(state, tabEl) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    if (tabEl) tabEl.classList.add('active');
+    const list = document.getElementById('jobsList');
+    list.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const r = await fetch('/jobs?state=' + state + '&end=99');
+      const { jobs } = await r.json();
+      if (!jobs.length) { list.innerHTML = '<div class="empty">No ' + state + ' jobs</div>'; return; }
+      list.innerHTML = jobs.map(j => `
+        <div class="job-card">
+          <div class="job-meta">
+            <div class="name">${esc(j.name)}</div>
+            <div class="id">${esc(j.id)}</div>
+            <div class="data">${esc(JSON.stringify(j.data))}</div>
+          </div>
+          <span class="badge badge-${state}">${state}</span>
+        </div>`).join('');
+    } catch { list.innerHTML = '<div class="empty">Failed to load</div>'; }
+  }
+
+  // ── Repeatable ────────────────────────────────────────────────────────────
+  async function loadRepeatable() {
+    const list = document.getElementById('repList');
+    list.innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const r = await fetch('/jobs/repeatable');
+      const { jobs } = await r.json();
+      if (!jobs.length) { list.innerHTML = '<div class="empty">No repeatable jobs</div>'; return; }
+      list.innerHTML = jobs.map(j => `
+        <div class="rep-card">
+          <div class="rep-info">
+            <div class="name">${esc(j.name)}</div>
+            <div class="key">${esc(j.key)}</div>
+            <div class="next">Next run: ${new Date(j.next).toLocaleString()}</div>
+          </div>
+          <button class="btn btn-danger" onclick="removeRepeatable('${esc(j.key)}')">Remove</button>
+        </div>`).join('');
+    } catch { list.innerHTML = '<div class="empty">Failed to load</div>'; }
+  }
+
+  async function removeRepeatable(key) {
+    if (!confirm('Remove repeatable job?')) return;
+    const r = await fetch('/jobs/repeatable/' + encodeURIComponent(key), { method: 'DELETE' });
+    const j = await r.json();
+    toast(j.message || j.error, r.ok ? 'ok' : 'err');
+    loadRepeatable();
+  }
+
+  // ── Inspector ─────────────────────────────────────────────────────────────
+  async function inspectJob() {
+    const id = document.getElementById('inspectId').value.trim();
+    if (!id) { toast('Enter a job ID', 'err'); return; }
+    const res = document.getElementById('inspectRes');
+    const actions = document.getElementById('inspectActions');
+    try {
+      const r = await fetch('/jobs/' + encodeURIComponent(id));
+      const json = await r.json();
+      showRes(res, json, r.ok);
+      actions.style.display = r.ok ? 'block' : 'none';
+    } catch { toast('Network error', 'err'); }
+  }
+
+  async function deleteJob() {
+    const id = document.getElementById('inspectId').value.trim();
+    if (!confirm('Delete job ' + id + '?')) return;
+    const r = await fetch('/jobs/' + encodeURIComponent(id), { method: 'DELETE' });
+    const j = await r.json();
+    toast(j.message || j.error, r.ok ? 'ok' : 'err');
+    if (r.ok) {
+      document.getElementById('inspectRes').classList.remove('show');
+      document.getElementById('inspectActions').style.display = 'none';
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function showRes(el, json, ok) {
+    el.textContent = JSON.stringify(json, null, 2);
+    el.className = 'response-box show ' + (ok ? 'ok' : 'err');
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  let toastTimer;
+  function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.className = '', 3200);
+  }
+</script>
+</body>
+</html>

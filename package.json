@@ -1,0 +1,43 @@
+{
+  "name": "on-demand-jobs-via-bullmq",
+  "version": "1.0.0",
+  "description": "\"Controlled Vibecoded\" POC to achieve on demand schedule jobs with BullMQ (Typescript and Express)",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "tsx --watch src/server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amardeep2006/on-demand-jobs-via-BullMQ.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/amardeep2006/on-demand-jobs-via-BullMQ/issues"
+  },
+  "homepage": "https://github.com/amardeep2006/on-demand-jobs-via-BullMQ#readme",
+  "dependencies": {
+    "bullmq": "^5.76.6",
+    "chrono-node": "^2.9.1",
+    "cron-parser": "^5.5.0",
+    "express": "^5.2.1",
+    "ms": "^2.1.3",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/ms": "^2.1.0",
+    "@types/node": "^25.6.2",
+    "@types/swagger-ui-express": "^4.1.8",
+    "openapi-types": "^12.1.3",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
