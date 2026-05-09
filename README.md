@@ -35,6 +35,7 @@ docker compose logs -f api worker
 
 Once running, open your browser to:
 - **Dashboard**: [http://localhost:3000](http://localhost:3000)
+- **Queue Admin (Bull-Board)**: [http://localhost:3000/admin/queues](http://localhost:3000/admin/queues)
 - **API Docs**: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
 
 To stop the containers and remove them:

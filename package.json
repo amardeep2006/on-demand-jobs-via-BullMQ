@@ -25,6 +25,8 @@
   },
   "homepage": "https://github.com/amardeep2006/on-demand-jobs-via-BullMQ#readme",
   "dependencies": {
+    "@bull-board/api": "^7.0.0",
+    "@bull-board/express": "^7.0.0",
     "bullmq": "^5.76.6",
     "chrono-node": "^2.9.1",
     "cron-parser": "^5.5.0",
