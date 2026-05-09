@@ -2,7 +2,7 @@
 
 A fully Dockerized, production-ready Proof of Concept (POC) for scheduling dynamic, on-demand jobs using [BullMQ](https://docs.bullmq.io/), Express, and TypeScript.
 
-![alt text](image.png)
+![alt text](image-2.png)
 
 ![alt text](image-1.png)
 
