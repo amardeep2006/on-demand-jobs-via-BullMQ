@@ -27,7 +27,7 @@ The absolute easiest way to run the application is using Docker. You don't even 
 docker compose up -d --build
 
 # 2. Check the logs (optional)
-docker compose logs -f app
+docker compose logs -f api worker
 ```
 
 Once running, open your browser to:
@@ -100,7 +100,33 @@ curl -X POST http://localhost:3000/jobs \
 
 ## 🏗 Architecture
 
-- **`src/server.ts`**: Express setup and entry point.
-- **`src/queues/jobQueue.ts`**: Singleton BullMQ connection.
-- **`src/workers/jobWorker.ts`**: The processor that executes the jobs.
+The application is fully decoupled. The API and the Worker run as completely separate processes (or separate Docker containers), communicating exclusively through Redis. This allows you to scale the API and background workers independently.
+
+```mermaid
+flowchart LR
+    subgraph "Docker / Local"
+        API[("🌐 Express API\n(Port 3000)")]
+        UI[("🎨 HTML UI")]
+        
+        UI -->|HTTP POST| API
+        
+        subgraph "BullMQ / Redis"
+            REDIS[("🔴 Redis Store\n(Queue State)")]
+        end
+        
+        API -->|1. Enqueue Job| REDIS
+        
+        subgraph "Background Processing"
+            WORKER1[("⚙️ Worker Process 1")]
+            WORKER2[("⚙️ Worker Process 2\n(Optional)")]
+        end
+        
+        REDIS -->|2. Pull & Execute| WORKER1
+        REDIS -->|2. Pull & Execute| WORKER2
+    end
+```
+
+- **`src/server.ts`**: Express API, Swagger, and UI routing. (Runs as `api`)
+- **`src/worker.ts`**: Dedicated entrypoint for the background job processor. (Runs as `worker`)
+- **`src/queues/jobQueue.ts`**: Shared BullMQ connection configuration.
 - **`src/utils/scheduleTranslator.ts`**: Converts human-friendly string inputs to BullMQ internal `JobsOptions`.

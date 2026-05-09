@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
-import { startWorker } from './workers/jobWorker';
+
 import jobsRouter from './routes/jobs';
 import { openApiSpec } from './api-spec/openapi';
 
@@ -30,8 +30,7 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
 });
 
-// ── Start worker (in-process; refactor to separate process later) ─────────────
-startWorker();
+
 
 // ── Start HTTP server ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
