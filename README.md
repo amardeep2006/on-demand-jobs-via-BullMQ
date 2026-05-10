@@ -17,7 +17,7 @@ A fully Dockerized, production-ready Proof of Concept (POC) for scheduling dynam
 - **Premium UI Dashboard**: Built-in dark-mode dashboard (`/`) to schedule and inspect jobs in real time.
 - **OpenAPI 3.0**: Interactive Swagger documentation available at `/api-docs`.
 - **Docker Ready**: Runs identically on any machine with `docker compose`.
-- **Persistent Redis**: Survives container restarts using Redis AOF.
+- **Persistent Valkey**: Survives container restarts using Valkey AOF (Valkey 9, Redis-compatible).
 
 ---
 
@@ -42,17 +42,17 @@ To stop the containers and remove them:
 ```bash
 docker compose down
 ```
-*(Note: Redis data is stored in a Docker volume and will persist. To wipe all jobs and start fresh, run `docker compose down -v`)*
+*(Note: Valkey data is stored in a Docker volume and will persist. To wipe all jobs and start fresh, run `docker compose down -v`)*
 
 ---
 
 ## 💻 Local Development (Without Docker)
 
-If you prefer to run the Node server locally while keeping Redis in Docker:
+If you prefer to run the Node server locally while keeping Valkey in Docker:
 
-1. **Start Redis**:
+1. **Start Valkey**:
    ```bash
-   docker compose up -d redis
+   docker compose up -d valkey
    ```
 
 2. **Install Dependencies**:
@@ -104,25 +104,25 @@ curl -X POST http://localhost:3000/jobs \
 
 ## 🏗 Architecture
 
-The application is fully decoupled. The API and the Worker run as completely separate processes (or separate Docker containers), communicating exclusively through Redis. This allows you to scale the API and background workers independently.
+The application is fully decoupled. The API and the Worker run as completely separate processes (or separate Docker containers), communicating exclusively through Valkey (Redis-compatible). This allows you to scale the API and background workers independently.
 
 ```mermaid
 flowchart LR
     subgraph "Docker / Local"
-        API[("🌐 Express API\n(Port 3000)")]
+        API[("🌐 Express API<br/>(Port 3000)")]
         UI[("🎨 HTML UI")]
         
         UI -->|HTTP POST| API
         
-        subgraph "BullMQ / Redis"
-            REDIS[("🔴 Redis Store\n(Queue State)")]
+        subgraph "BullMQ / Valkey"
+            REDIS[("🟩 Valkey Store<br/>(Queue State)")]
         end
         
         API -->|1. Enqueue Job| REDIS
         
         subgraph "Background Processing"
             WORKER1[("⚙️ Worker Process 1")]
-            WORKER2[("⚙️ Worker Process 2\n(Optional)")]
+            WORKER2[("⚙️ Worker Process 2<br/>(Optional)")]
         end
         
         REDIS -->|2. Pull & Execute| WORKER1

@@ -1,12 +1,12 @@
 services:
-  valkey:
-    image: valkey/valkey:9.0-alpine
-    container_name: bullmq-valkey
-    command: valkey-server --appendonly yes
+  redis:
+    image: redis:8.6-alpine
+    container_name: bullmq-redis
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
-      - valkey-data:/data
+      - redis-data:/data
     restart: unless-stopped
 
   api:
@@ -16,11 +16,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REDIS_HOST=valkey
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
       - PORT=3000
     depends_on:
-      - valkey
+      - redis
     restart: unless-stopped
 
   worker:
@@ -28,11 +28,11 @@ services:
     container_name: bullmq-worker
     command: ["node", "dist/worker.js"]
     environment:
-      - REDIS_HOST=valkey
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
-      - valkey
+      - redis
     restart: unless-stopped
 
 volumes:
-  valkey-data:
+  redis-data:
