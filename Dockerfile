@@ -28,7 +28,7 @@ COPY public ./public
 # Set default environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV REDIS_HOST=redis
+ENV REDIS_HOST=valkey
 ENV REDIS_PORT=6379
 
 EXPOSE 3000
